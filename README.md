@@ -1,89 +1,226 @@
 # Multi-Agent Discussion Platform
 
-A Streamlit application that facilitates discussions between multiple Ollama AI models, each with its own distinct personality and system prompt.
+A powerful Streamlit application that facilitates rich, interactive discussions between multiple Ollama AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights.
+
+![Multi-Agent Discussion in action](https://github.com/yourusername/multi-agent-discussion/raw/main/docs/images/discussion_example.png)
 
 ## Features
 
-- Configure multiple AI agents with different personas and personalities
-- Run multi-round discussions between AI models
-- Create and manage custom personas
-- Configure Ollama settings
-- Interactive UI with discussion visualization
+- **Multi-Agent Conversations**: Configure up to 4 AI agents (1 synthesizer + 3 discussion agents) with distinct personas
+- **Natural Discussion Flow**: Agents build on each other's ideas in a realistic, conversational manner
+- **Flexible Agent Configuration**: Choose from built-in personas or create custom ones with specific expertise
+- **Interactive UI**: Watch responses stream in real-time and review discussion history
+- **Sophisticated Orchestration**: Multi-round discussions with automatic context management
+- **Advanced Persona Management**: Create, edit, and manage custom personas with the built-in editor
+- **Ollama Integration**: Works with any model available in your local Ollama installation
+
+## How It Works
+
+The application uses a moderator-participant discussion model:
+
+1. **Main Synthesizer Agent**: Acts as the discussion leader and synthesizes insights at the end
+2. **Discussion Agents**: Contribute different perspectives based on their personas
+3. **Multi-Round Format**: 
+   - The synthesizer starts with initial thoughts
+   - Discussion agents respond to the topic and each other
+   - After configured rounds, the synthesizer provides a final summary
+
+The orchestrator manages the conversation flow, ensuring each agent has appropriate context from previous messages and maintains a cohesive discussion.
 
 ## Requirements
 
-- Python 3.8+
-- Streamlit
-- Ollama (running locally or on a remote server)
-- Local Ollama models (e.g., llama3, mistral, phi3, etc.)
+- **Python 3.8+**
+- **Streamlit 1.26.0+**: For the interactive web interface
+- **Ollama**: Running either locally or on a remote server
+- **Local Ollama models**: Compatible with any models available in Ollama (llama3, mistral, phi3, etc.)
 
-## Installation
+## Detailed Setup Guide
 
-1. Clone this repository:
-```
+### 1. Install Python Dependencies
+
+First, ensure you have Python 3.8 or newer installed. Then install the required packages:
+
+```bash
+# Clone this repository
 git clone https://github.com/yourusername/multi-agent-discussion.git
 cd multi-agent-discussion
-```
 
-2. Install the required packages:
-```
+# Create and activate a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Make sure Ollama is installed and running (see [Ollama installation guide](https://ollama.ai/download))
+### 2. Install and Configure Ollama
 
-## Usage
+The application requires Ollama to provide the AI models:
 
-1. Start the Streamlit app:
-```
+1. Install Ollama following the [official instructions](https://ollama.ai/download) for your platform
+2. Start the Ollama service:
+   ```bash
+   ollama serve
+   ```
+3. Pull at least one model to use with the application:
+   ```bash
+   ollama pull llama3  # or any other model you prefer
+   ```
+
+You can also configure Ollama to run on a different machine by setting the `OLLAMA_HOST` environment variable or configuring it through the application's Advanced Configuration page.
+
+### 3. Launch the Application
+
+Start the Streamlit application:
+
+```bash
 streamlit run src/app.py
 ```
 
-2. Open your web browser and navigate to the URL shown in the terminal (typically http://localhost:8501)
+Your default web browser should open automatically to the application (typically at http://localhost:8501).
 
-3. Configure your agents:
-   - Set up the main "synthesizer" agent that will consolidate insights
+## Detailed Usage Guide
+
+### Setting Up a Discussion
+
+1. **Configure Your Agents**:
+   - In the "Setup Agents" tab, set up your main synthesizer agent that will lead the discussion
    - Add 1-3 discussion agents with different personas
-   - Choose from built-in personas or create custom ones in the Advanced Configuration section
+   - For each agent, select:
+     - A name (e.g., "Creative Thinker", "Skeptical Analyst")
+     - An Ollama model to power the agent (different models can provide more diverse perspectives)
+     - A system prompt defining the agent's persona (use built-in templates or create custom ones)
 
-4. Start a discussion by entering a topic or question
+2. **Start a Discussion**:
+   - Switch to the "Discussion" tab
+   - Enter a topic or question for discussion (more specific topics generally yield better results)
+   - Choose the number of discussion rounds (2-3 rounds work well for most topics)
+   - Click "Start Discussion" to begin
 
-5. View the results of the multi-agent discussion
+3. **View Results**:
+   - Watch as agents respond in real-time (if streaming is enabled)
+   - Review the complete discussion, organized by rounds
+   - The final synthesis provides a comprehensive summary of the key insights
 
-## Creating Custom Personas
+### Working with Personas
 
-1. Navigate to the "Advanced Configuration" section
-2. Select "Persona Editor"
-3. Create a new persona with a name, system prompt, and optional description
-4. Save your persona to use it in discussions
+The application comes with several built-in personas and allows you to create custom ones:
 
-## Configuring Ollama
+1. Go to "Advanced Configuration" > "Persona Editor"
+2. To create a new persona:
+   - Enter a distinctive name
+   - Craft a system prompt that defines the persona's characteristics, expertise, and communication style
+   - Add an optional description for easy reference
+   - Click "Save Persona"
 
-1. Navigate to the "Advanced Configuration" section
-2. Select "Ollama Configuration"
-3. Configure your Ollama host URL (default: http://localhost:11434)
-4. View available models and pull new ones if needed
+3. To edit or delete existing personas:
+   - Check "Edit existing persona"
+   - Select the persona from the dropdown
+   - Modify the system prompt or description
+   - Click "Save Persona" to update or "Delete Persona" to remove
 
-## Project Structure
+Personas are saved as JSON files in the `personas/` directory and will persist between sessions.
 
-```
-multi-agent-discussion/
-├── src/
-│   ├── app.py                 # Main application file
-│   └── advanced_config.py     # Advanced configuration UI
-├── personas/                  # Directory for saved personas (created automatically)
-├── requirements.txt           # Project dependencies
-└── README.md                  # This file
-```
+### Configuring Ollama
+
+If you're running Ollama on a different machine or want to manage your models:
+
+1. Go to "Advanced Configuration" > "Ollama Configuration"
+2. Set your Ollama host URL (default is http://localhost:11434)
+3. View available models and pull new ones if needed
+4. Filter models by family (llama, mistral, phi, etc.)
+
+## Advanced Features
+
+### Streaming Responses
+
+By default, the application streams responses in real-time. You can toggle this feature on/off:
+
+- Enable streaming to see the thought process develop
+- Disable streaming for faster results with complex topics
+
+### Continuing Discussions
+
+After a discussion completes:
+
+1. Click "Continue Discussion" to add more rounds with the same agents and topic
+2. Or "Start New Discussion" to begin fresh with a different topic
+
+### Debug Mode
+
+For troubleshooting:
+
+1. Enable "Debug mode" in the Discussion tab
+2. This shows additional information about model responses and connection status
+
+## Code Architecture
+
+The application consists of several key components:
+
+- **`app.py`**: Main application file containing:
+  - `ModelAgent` class: Handles individual agent interactions with Ollama
+  - `DiscussionOrchestrator` class: Manages multi-agent conversations and rounds
+  - Streamlit UI implementation for the main discussion interface
+
+- **`advanced_config.py`**: Handles advanced configuration features:
+  - `PersonaManager` class: Manages saving/loading custom personas
+  - UI components for persona editing and Ollama configuration
+
+- **`personas/` directory**: Stores custom persona configurations as JSON files
 
 ## Tips for Best Results
 
-- Use different model types for different agents to get diverse perspectives
-- Create personas with clear, distinct viewpoints and expertise
-- Use concrete, specific topics to get more focused discussions
-- Experiment with different numbers of discussion rounds
-- For complex topics, continue the discussion for multiple rounds
+- **Model Diversity**: Use different models for different agents when possible
+- **Agent Balance**: Include agents with complementary perspectives (e.g., creative + practical)
+- **Specific Topics**: Focused questions yield more coherent discussions than broad topics
+- **Persona Design**: Create personas with clear, distinct viewpoints and expertise areas
+- **Round Count**: 2-3 rounds typically produce the best balance of depth and coherence
+- **System Prompts**: Refine agent prompts to guide the style and focus of contributions
+
+## Troubleshooting
+
+### Connection Issues
+
+If the application can't connect to Ollama:
+
+1. Verify Ollama is running with `ollama serve`
+2. Check the Ollama host URL in Advanced Configuration
+3. Ensure no firewall is blocking port 11434
+4. Test the connection directly with `curl http://localhost:11434/api/tags`
+
+### Model Loading Problems
+
+If models aren't appearing or loading:
+
+1. Go to Advanced Configuration > Ollama Configuration
+2. Click "Refresh Models" to update the available model list
+3. If models are missing, pull them using Ollama or the UI
+4. Verify model names in the application match those in Ollama
+
+### UI Responsiveness
+
+For better performance:
+
+1. Reduce the number of discussion agents (1-2 works well for most topics)
+2. Use smaller/faster models for quicker responses
+3. Consider disabling streaming for faster completion
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Built using [Streamlit](https://streamlit.io/) for the interactive UI
+- Powered by [Ollama](https://ollama.ai/) for local LLM inference
+- Inspired by various multi-agent AI collaboration frameworks
