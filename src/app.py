@@ -345,7 +345,116 @@ def refresh_available_models():
 
 # GUI Application
 def main():
-    st.set_page_config(page_title="Multi-Agent Discussion", layout="wide")
+    st.set_page_config(
+        page_title="Multi-Agent Discussion", 
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Custom CSS for improved UI
+    st.markdown("""
+    <style>
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    h1, h2, h3, h4 {
+        font-weight: 600;
+        color: #1E3A8A;
+    }
+    .stButton>button {
+        background-color: #1E3A8A;
+        color: white;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    .stButton>button:hover {
+        background-color: #2563EB;
+        border-color: #2563EB;
+    }
+    .stExpander {
+        border-radius: 6px;
+        border: 1px solid #E5E7EB;
+    }
+    .streamlit-expanderHeader {
+        font-weight: 500;
+        color: #1F2937;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 3rem;
+        white-space: pre-wrap;
+        border-radius: 6px 6px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #EFF6FF;
+        color: #1E3A8A;
+        font-weight: 500;
+    }
+    .stSelectbox label, .stNumberInput label, .stTextInput label, .stTextArea label {
+        font-weight: 500;
+        color: #374151;
+        font-size: 14px;
+    }
+    /* Fix for text input and text area to ensure text is visible */
+    input, textarea {
+        color: #111827 !important;
+        background-color: #FFFFFF !important;
+    }
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+        color: #111827 !important;
+        background-color: #FFFFFF !important;
+    }
+    /* Fix for text area in dark mode */
+    textarea {
+        color: #111827 !important;
+        background-color: #FFFFFF !important;
+    }
+    .stMarkdown p {
+        line-height: 1.6;
+    }
+    .success {
+        padding: 1rem;
+        background-color: #ECFDF5;
+        border-radius: 6px;
+        color: #047857;
+        margin-bottom: 1rem;
+    }
+    .info {
+        padding: 1rem;
+        background-color: #EFF6FF;
+        border-radius: 6px;
+        color: #1E40AF;
+        margin-bottom: 1rem;
+    }
+    .warning {
+        padding: 1rem;
+        background-color: #FFFBEB;
+        border-radius: 6px;
+        color: #92400E;
+        margin-bottom: 1rem;
+    }
+    /* Ensure code blocks have dark text */
+    code {
+        color: #111827 !important;
+    }
+    /* Ensure selectbox text is visible */
+    .stSelectbox div [data-baseweb="select"] div [data-testid="stMarkdown"] p {
+        color: #111827 !important;
+    }
+    /* Make sure monospace text in markdown is visible */
+    .stMarkdown pre, .stMarkdown code {
+        color: #111827 !important;
+        background-color: #F1F5F9 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Initialize session state variables
     if "orchestrator" not in st.session_state:
@@ -364,14 +473,27 @@ def main():
     if "persona_manager" not in st.session_state:
         st.session_state.persona_manager = PersonaManager(save_dir="personas")
     
-    # Sidebar for navigation
-    st.sidebar.title("Navigation")
-    pages = {
-        "Multi-Agent Discussion": "main_discussion",
-        "Advanced Configuration": "advanced_config"
-    }
-    
-    selection = st.sidebar.radio("Go to", list(pages.keys()))
+    # Sidebar for navigation with improved styling
+    with st.sidebar:
+        st.image("https://img.icons8.com/fluency/96/000000/chat.png", width=80)
+        st.title("Multi-Agent Discussion")
+        st.markdown("---")
+        pages = {
+            "💬 Discussion": "main_discussion",
+            "⚙️ Advanced Configuration": "advanced_config"
+        }
+        
+        selection = st.radio("", list(pages.keys()))
+        
+        st.markdown("---")
+        st.markdown("#### About")
+        st.markdown("""
+        Create engaging discussions between multiple AI personas with different viewpoints.
+        """)
+        
+        # Add version info
+        st.markdown("---")
+        st.caption("v1.0.0 | [Documentation](https://github.com/yourusername/multi-agent-discussion)")
     
     # Display the selected page
     if pages[selection] == "main_discussion":
@@ -381,44 +503,79 @@ def main():
 
 def display_main_discussion_ui():
     """Main discussion UI"""
-    st.title("Multi-Agent Discussion Platform")
+    st.markdown("# Multi-Agent Discussion Platform")
+    st.markdown("Create thoughtful discussions between AI agents with different perspectives")
     
     # Check if Ollama is available
     if not st.session_state.available_models:
         if not refresh_available_models():
-            st.info("Please make sure Ollama is running. Go to Advanced Configuration to troubleshoot.")
+            st.markdown("""
+            <div class="info">
+                <h4>📢 Setup Required</h4>
+                <p>Please make sure Ollama is running. Go to Advanced Configuration to troubleshoot.</p>
+            </div>
+            """, unsafe_allow_html=True)
             return
     
     # Setup tab and Discussion tab
-    tab1, tab2 = st.tabs(["Setup Agents", "Discussion"])
+    tab1, tab2 = st.tabs(["🤖 Setup Agents", "💬 Discussion"])
     
     with tab1:
-        st.header("Configure Your Agents")
+        st.markdown("## Configure Your Agents")
         
-        col1, col2 = st.columns([3, 1])
-        with col1:
+        # Model availability check in a card-like container
+        connection_container = st.container()
+        with connection_container:
             if not st.session_state.available_models:
-                st.warning("No Ollama models detected. Make sure Ollama is running and models are available.")
-        
-        with col2:
-            if st.button("Refresh Ollama Models"):
-                if refresh_available_models():
-                    st.success(f"Found {len(st.session_state.available_models)} models!")
+                st.markdown("""
+                <div class="warning">
+                    <h4>⚠️ No Models Detected</h4>
+                    <p>Make sure Ollama is running and models are available.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button("🔄 Refresh Ollama Models", key="refresh_main"):
+                    if refresh_available_models():
+                        st.markdown("""
+                        <div class="success">
+                            <h4>✅ Success!</h4>
+                            <p>Found Ollama models. You can now proceed with agent configuration.</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.experimental_rerun()
+            else:
+                st.markdown(f"""
+                <div class="success">
+                    <h4>✅ Connected to Ollama</h4>
+                    <p>Found {len(st.session_state.available_models)} models available for use.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button("🔄 Refresh Models", key="refresh_additional"):
+                    refresh_available_models()
                     st.experimental_rerun()
         
-        # Main agent setup
-        st.subheader("Main Agent (The one that will report back to you)")
-        main_col1, main_col2 = st.columns(2)
-        with main_col1:
-            main_agent_name = st.text_input("Main Agent Name", "Synthesizer")
-            main_agent_model = st.selectbox(
-                "Main Agent Model", 
-                st.session_state.available_models if st.session_state.available_models else ["No models available"]
-            )
-        with main_col2:
-            main_agent_prompt = st.text_area(
-                "Main Agent System Prompt",
-                """You are a thoughtful conversation facilitator in a casual group discussion.
+        # Main agent setup with card-like styling
+        st.markdown("### 🎯 Main Synthesizer")
+        st.markdown("This agent will lead the discussion and provide the final synthesis")
+        
+        main_agent_container = st.container()
+        with main_agent_container:
+            col1, col2 = st.columns([3, 7])
+            
+            with col1:
+                main_agent_name = st.text_input("Name", "Synthesizer", 
+                                              help="A distinctive name for your main agent")
+                main_agent_model = st.selectbox(
+                    "Model", 
+                    st.session_state.available_models if st.session_state.available_models else ["No models available"],
+                    help="The Ollama model that will power this agent"
+                )
+            
+            with col2:
+                main_agent_prompt = st.text_area(
+                    "System Prompt",
+                    """You are a thoughtful conversation facilitator in a casual group discussion.
 
 Your role is to guide a natural, engaging conversation among different participants with diverse perspectives.
 Speak in a conversational, friendly tone - like a good host at a coffee shop discussion.
@@ -426,11 +583,14 @@ Ask questions that draw out others' perspectives and encourage them to build on 
 When synthesizing the discussion, highlight how ideas connected and evolved through conversation.
 Reference specific points made by participants by name, showing how the conversation built toward insights.
 Use natural language like 'I think,' 'it seems like,' and other conversational markers.
-Your final summary should feel like a natural conclusion to a rich discussion among friends."""
-            )
+Your final summary should feel like a natural conclusion to a rich discussion among friends.""",
+                    height=180,
+                    help="Instructions that define how this agent will behave"
+                )
         
-        # Additional agents setup
-        st.subheader("Discussion Agents")
+        # Additional agents setup with improved visual design
+        st.markdown("### 👥 Discussion Participants")
+        st.markdown("Add up to 3 agents with different perspectives to join the conversation")
         
         # Get both built-in and custom personas with more conversational styles
         example_personas = {
@@ -474,71 +634,114 @@ Share personal reflections on values and societal implications in a relatable wa
         
         agent_configs = []
         
-        for i in range(3):  # Allow up to 3 additional agents
-            st.markdown(f"#### Agent {i+1}")
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                agent_name = st.text_input(f"Agent {i+1} Name", f"Agent {i+1}")
-                agent_model = st.selectbox(
-                    f"Agent {i+1} Model", 
-                    st.session_state.available_models if st.session_state.available_models else ["No models available"],
-                    key=f"model_{i}"
-                )
-                persona_select = st.selectbox(
-                    f"Select a persona template or create custom", 
-                    ["Custom"] + list(example_personas.keys()),
-                    key=f"persona_{i}"
-                )
-            
-            with col2:
-                if persona_select != "Custom":
-                    agent_prompt = st.text_area(
-                        f"Agent {i+1} System Prompt", 
-                        example_personas[persona_select],
-                        key=f"prompt_{i}"
+        # Add tabs for more organized agent configuration
+        agent_tabs = st.tabs(["Agent 1", "Agent 2", "Agent 3"])
+        
+        for i, tab in enumerate(agent_tabs):
+            with tab:
+                st.markdown(f"#### Configure Agent {i+1}")
+                
+                col1, col2 = st.columns([3, 7])
+                
+                with col1:
+                    agent_name = st.text_input(f"Name", f"Agent {i+1}", key=f"name_{i}")
+                    agent_model = st.selectbox(
+                        f"Model", 
+                        st.session_state.available_models if st.session_state.available_models else ["No models available"],
+                        key=f"model_{i}"
                     )
-                else:
-                    agent_prompt = st.text_area(
-                        f"Agent {i+1} System Prompt", 
-                        f"""You are a participant in a casual, thoughtful group conversation.
+                    persona_select = st.selectbox(
+                        f"Persona Template", 
+                        ["Custom"] + list(example_personas.keys()),
+                        key=f"persona_{i}"
+                    )
+                    
+                    include_agent = st.checkbox(f"Include in discussion", value=(i==0), key=f"include_{i}")
+                
+                with col2:
+                    if persona_select != "Custom":
+                        agent_prompt = st.text_area(
+                            f"System Prompt", 
+                            example_personas[persona_select],
+                            height=180,
+                            key=f"prompt_{i}"
+                        )
+                    else:
+                        agent_prompt = st.text_area(
+                            f"System Prompt", 
+                            f"""You are a participant in a casual, thoughtful group conversation.
 
 Speak in a natural, conversational tone as if chatting with friends at a coffee shop.
 Respond directly to points made by others, building on their ideas or offering alternative perspectives.
 Use first-person language, occasional questions, and conversational phrases like "I think," "I wonder if," etc.
 Share your unique perspective while engaging meaningfully with what others have said.
 Feel free to use analogies, examples, or personal anecdotes to illustrate your points in a relatable way.""",
-                        key=f"prompt_{i}"
-                    )
-            
-            include_agent = st.checkbox(f"Include Agent {i+1} in discussions", value=(i==0))
-            
-            if include_agent:
-                agent_configs.append({
-                    "name": agent_name,
-                    "model": agent_model,
-                    "prompt": agent_prompt
-                })
+                            height=180,
+                            key=f"prompt_{i}"
+                        )
+                
+                if include_agent:
+                    agent_configs.append({
+                        "name": agent_name,
+                        "model": agent_model,
+                        "prompt": agent_prompt
+                    })
         
-        if st.button("Configure Agents"):
+        # Configuration button with improved styling
+        st.markdown("### Ready to Start?")
+        
+        config_col1, config_col2 = st.columns([3, 1])
+        with config_col1:
+            st.markdown("Click the button to configure your agents and prepare for discussion")
+        
+        with config_col2:
+            config_button = st.button("⚙️ Configure Agents", use_container_width=True)
+        
+        if config_button:
             if not st.session_state.available_models:
-                st.error("No models available. Make sure Ollama is running.")
-                # Add a refresh button right next to the error
-                if st.button("Try Refreshing Models", key="refresh_on_config"):
-                    if refresh_available_models():
-                        st.success(f"Found {len(st.session_state.available_models)} models!")
-                        st.experimental_rerun()
-                    else:
-                        st.warning("Please go to Advanced Configuration > Ollama Configuration to troubleshoot.")
+                st.markdown("""
+                <div class="warning">
+                    <h4>⚠️ No Models Available</h4>
+                    <p>Make sure Ollama is running and properly configured.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                refresh_col1, refresh_col2 = st.columns([3, 1])
+                with refresh_col2:
+                    if st.button("🔄 Try Refreshing", key="refresh_on_config"):
+                        if refresh_available_models():
+                            st.markdown("""
+                            <div class="success">
+                                <h4>✅ Success!</h4>
+                                <p>Found Ollama models. You can now proceed with agent configuration.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            st.experimental_rerun()
+                        else:
+                            st.markdown("""
+                            <div class="warning">
+                                <p>Please go to Advanced Configuration to troubleshoot your Ollama connection.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
             elif len(agent_configs) == 0:
-                st.error("Please include at least one discussion agent.")
+                st.markdown("""
+                <div class="warning">
+                    <h4>⚠️ Missing Agents</h4>
+                    <p>Please include at least one discussion agent.</p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 try:
                     orchestrator = DiscussionOrchestrator()
                     
                     # Validate that selected models exist in available_models
                     if main_agent_model not in st.session_state.available_models:
-                        st.error(f"Main agent model '{main_agent_model}' is not available. Please select a different model.")
+                        st.markdown(f"""
+                        <div class="warning">
+                            <h4>⚠️ Model Not Available</h4>
+                            <p>Main agent model '{main_agent_model}' is not available. Please select a different model.</p>
+                        </div>
+                        """, unsafe_allow_html=True)
                         return
                     
                     # Create main agent
@@ -548,7 +751,12 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                     # Create discussion agents
                     for i, config in enumerate(agent_configs):
                         if config["model"] not in st.session_state.available_models:
-                            st.error(f"Agent {i+1} model '{config['model']}' is not available. Please select a different model.")
+                            st.markdown(f"""
+                            <div class="warning">
+                                <h4>⚠️ Model Not Available</h4>
+                                <p>Agent {i+1} model '{config['model']}' is not available. Please select a different model.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
                             return
                             
                         agent = ModelAgent(config["model"], config["prompt"], config["name"])
@@ -564,129 +772,200 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                                     {"role": "user", "content": "Respond with only the word 'OK' for connection test"}
                                 ]
                             )
-                            st.success("Connection to Ollama verified successfully!")
+                            st.markdown("""
+                            <div class="success">
+                                <h4>✅ Connection Verified</h4>
+                                <p>Successfully connected to Ollama and models are responding.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
                         except Exception as test_error:
-                            st.error(f"Error testing Ollama connection: {str(test_error)}")
+                            st.markdown("""
+                            <div class="warning">
+                                <h4>⚠️ Connection Error</h4>
+                                <p>Error testing Ollama connection.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
                             with st.expander("Debug Details"):
                                 st.code(traceback.format_exc())
                             return
                     
                     st.session_state.orchestrator = orchestrator
                     st.session_state.agents_configured = True
-                    st.success("Agents configured successfully!")
+                    st.markdown("""
+                    <div class="success">
+                        <h4>✅ Agents Configured!</h4>
+                        <p>Your agents are ready. Switch to the Discussion tab to start a conversation.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 except Exception as e:
-                    st.error(f"Error configuring agents: {str(e)}")
+                    st.markdown(f"""
+                    <div class="warning">
+                        <h4>⚠️ Configuration Error</h4>
+                        <p>Error configuring agents: {str(e)}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                     with st.expander("Debug Details"):
                         st.code(traceback.format_exc())
     
     with tab2:
-        st.header("Start a Discussion")
+        st.markdown("## Start a Discussion")
         
         if not st.session_state.agents_configured:
-            st.warning("Please configure your agents in the Setup tab first.")
+            st.markdown("""
+            <div class="info">
+                <h4>👈 Setup Required</h4>
+                <p>Please configure your agents in the Setup tab first.</p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                topic = st.text_area("Enter a topic or question for discussion:", height=100)
+            # Discussion setup in a card-like container
+            setup_container = st.container()
+            with setup_container:
+                st.markdown("### Enter Topic or Question")
+                
+                topic = st.text_area(
+                    "What would you like the agents to discuss?",
+                    height=100,
+                    placeholder="Enter a specific topic or question for the agents to discuss..."
+                )
+                
+                col1, col2, col3 = st.columns([2, 1, 1])
+                
+                with col1:
+                    rounds = st.slider(
+                        "Discussion Rounds", 
+                        min_value=1, 
+                        max_value=5, 
+                        value=2,
+                        help="Number of back-and-forth exchanges between agents"
+                    )
+                
+                with col2:
+                    continue_discussion = st.checkbox(
+                        "Continue previous", 
+                        value=False,
+                        disabled=not st.session_state.current_discussion_id,
+                        help="Continue from the last discussion"
+                    )
+                
+                with col3:
+                    # Initialize streaming UI controls
+                    if "show_streaming" not in st.session_state:
+                        st.session_state.show_streaming = True
+                    
+                    streaming_toggle = st.checkbox(
+                        "Show streaming", 
+                        value=st.session_state.show_streaming,
+                        help="Show responses as they're generated"
+                    )
+                    st.session_state.show_streaming = streaming_toggle
             
-            with col2:
-                rounds = st.number_input("Discussion rounds:", min_value=1, max_value=5, value=2, 
-                                        help="Number of back-and-forth exchanges between agents")
-                continue_discussion = st.checkbox("Continue previous discussion", value=False,
-                                                disabled=not st.session_state.current_discussion_id)
-                
-                start_btn = st.button("Start Discussion")
-                # Initialize streaming placeholders if not present
-                if "streaming_responses" not in st.session_state:
-                    st.session_state.streaming_responses = {}
-                
-                # Initialize streaming UI controls
-                if "show_streaming" not in st.session_state:
-                    st.session_state.show_streaming = True
-                
+            # Debug mode toggle in expandable section
+            with st.expander("Advanced Options"):
                 if "debug_mode" not in st.session_state:
                     st.session_state.debug_mode = False
                 
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    streaming_toggle = st.checkbox("Show streaming responses", value=st.session_state.show_streaming)
-                    st.session_state.show_streaming = streaming_toggle
-                
-                with col2:
-                    debug_toggle = st.checkbox("Debug mode", value=st.session_state.debug_mode)
-                    st.session_state.debug_mode = debug_toggle
-                
-                if start_btn:
-                    if not topic:
-                        st.error("Please enter a topic for discussion.")
-                    else:
-                        # Create placeholders for streaming responses
-                        response_placeholders = {}
-                        stream_container = st.empty()
-                        
-                        # Add debug container if debug mode is enabled
-                        if st.session_state.debug_mode:
-                            debug_container = st.container()
-                            with debug_container:
-                                st.subheader("Debug Information")
-                                st.write("Ollama models:", st.session_state.available_models)
-                                
-                                # Test simple connection to Ollama
-                                try:
-                                    test_response = ollama.list()
-                                    st.write("Ollama connection test successful")
-                                    st.json({"models_count": len(test_response.get('models', []))})
-                                except Exception as conn_err:
-                                    st.error(f"Ollama connection test failed: {str(conn_err)}")
-                        
-                        # Stream handler function for updating UI in real-time
-                        def handle_stream(agent_id, agent_name, content, is_complete):
-                            if not st.session_state.show_streaming:
-                                return
+                debug_toggle = st.checkbox(
+                    "Debug mode", 
+                    value=st.session_state.debug_mode,
+                    help="Show technical details for troubleshooting"
+                )
+                st.session_state.debug_mode = debug_toggle
+            
+            # Start button prominently displayed
+            start_col1, start_col2, start_col3 = st.columns([1, 2, 1])
+            with start_col2:
+                start_btn = st.button("🚀 Start Discussion", use_container_width=True)
+            
+            # Initialize streaming placeholders if not present
+            if "streaming_responses" not in st.session_state:
+                st.session_state.streaming_responses = {}
+            
+            if start_btn:
+                if not topic:
+                    st.markdown("""
+                    <div class="warning">
+                        <h4>⚠️ Missing Topic</h4>
+                        <p>Please enter a topic or question for the discussion.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # Create placeholders for streaming responses
+                    response_placeholders = {}
+                    stream_container = st.empty()
+                    
+                    # Add debug container if debug mode is enabled
+                    if st.session_state.debug_mode:
+                        debug_container = st.container()
+                        with debug_container:
+                            st.markdown("#### Debug Information")
+                            st.write("Ollama models:", st.session_state.available_models)
                             
-                            try:    
-                                with stream_container.container():
-                                    if agent_id not in response_placeholders:
-                                        # First time seeing this agent in the stream
-                                        st.markdown(f"### {agent_name} is responding...")
-                                        response_placeholders[agent_id] = st.empty()
-                                    
-                                    # Update the placeholder with the latest content
-                                    if content:  # Check for empty content
-                                        response_placeholders[agent_id].markdown(content)
-                                    
-                                    # Show completion status
-                                    if is_complete:
-                                        st.success(f"{agent_name} has finished responding.")
-                            except Exception as e:
-                                # Fallback if streaming update fails
-                                st.error(f"Error updating streaming UI: {str(e)}")
+                            # Test simple connection to Ollama
+                            try:
+                                test_response = ollama.list()
+                                st.success("Ollama connection test successful")
+                                st.json({"models_count": len(test_response.get('models', []))})
+                            except Exception as conn_err:
+                                st.error(f"Ollama connection test failed: {str(conn_err)}")
+                    
+                    # Stream handler function for updating UI in real-time
+                    def handle_stream(agent_id, agent_name, content, is_complete):
+                        if not st.session_state.show_streaming:
+                            return
                         
-                        with st.spinner("Discussion in progress..."):
-                            if continue_discussion and st.session_state.current_discussion_id:
-                                # Continue existing discussion
-                                discussion_id = st.session_state.orchestrator.start_discussion(
-                                    topic, 
-                                    "main", 
-                                    discussion_id=st.session_state.current_discussion_id,
-                                    rounds=rounds,
-                                    stream_handler=handle_stream if st.session_state.show_streaming else None
-                                )
-                            else:
-                                # Start new discussion
-                                discussion_id = st.session_state.orchestrator.start_discussion(
-                                    topic, 
-                                    "main",
-                                    rounds=rounds,
-                                    stream_handler=handle_stream if st.session_state.show_streaming else None
-                                )
-                            st.session_state.current_discussion_id = discussion_id
-                        
-                        # Clear streaming container when done
-                        stream_container.empty()
+                        try:    
+                            with stream_container.container():
+                                if agent_id not in response_placeholders:
+                                    # First time seeing this agent in the stream
+                                    st.markdown(f"### {agent_name} is responding...")
+                                    response_placeholders[agent_id] = st.empty()
+                                
+                                # Update the placeholder with the latest content
+                                if content:  # Check for empty content
+                                    response_placeholders[agent_id].markdown(content)
+                                
+                                # Show completion status
+                                if is_complete:
+                                    st.markdown(f"""
+                                    <div class="success">
+                                        <p>✅ {agent_name} has finished responding.</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                        except Exception as e:
+                            # Fallback if streaming update fails
+                            st.error(f"Error updating streaming UI: {str(e)}")
+                    
+                    with st.spinner("💭 Discussion in progress..."):
+                        if continue_discussion and st.session_state.current_discussion_id:
+                            # Continue existing discussion
+                            discussion_id = st.session_state.orchestrator.start_discussion(
+                                topic, 
+                                "main", 
+                                discussion_id=st.session_state.current_discussion_id,
+                                rounds=rounds,
+                                stream_handler=handle_stream if st.session_state.show_streaming else None
+                            )
+                        else:
+                            # Start new discussion
+                            discussion_id = st.session_state.orchestrator.start_discussion(
+                                topic, 
+                                "main",
+                                rounds=rounds,
+                                stream_handler=handle_stream if st.session_state.show_streaming else None
+                            )
+                        st.session_state.current_discussion_id = discussion_id
+                    
+                    # Clear streaming container when done
+                    stream_container.empty()
             
             if st.session_state.current_discussion_id:
-                st.subheader("Discussion Results")
+                # Show horizontal divider
+                st.markdown("---")
+                
+                # Improved discussion results display
+                st.markdown("## 📄 Discussion Results")
+                st.markdown(f"**Topic:** {st.session_state.orchestrator.get_discussion_history(st.session_state.current_discussion_id)[0]['content'][:100]}...")
                 
                 # Get discussion history and sort by round and timestamp
                 discussion_history = st.session_state.orchestrator.get_discussion_history(
@@ -702,14 +981,26 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                         rounds[round_num] = []
                     rounds[round_num].append(entry)
                 
-                # Display discussion by rounds
+                # Display discussion by rounds with improved styling
                 for round_num in sorted(rounds.keys()):
                     if round_num == 0:
-                        st.markdown("### 📝 Initial Thoughts")
+                        st.markdown("""
+                        <div style="background-color: #EFF6FF; padding: 0.5rem 1rem; border-radius: 6px; margin-top: 1rem;">
+                            <h3>📝 Initial Thoughts</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
                     elif round_num == max(rounds.keys()):
-                        st.markdown("### 🏁 Final Synthesis")
+                        st.markdown("""
+                        <div style="background-color: #ECFDF5; padding: 0.5rem 1rem; border-radius: 6px; margin-top: 1rem;">
+                            <h3>🏁 Final Synthesis</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
                     else:
-                        st.markdown(f"### 🔄 Round {round_num}")
+                        st.markdown(f"""
+                        <div style="background-color: #F3F4F6; padding: 0.5rem 1rem; border-radius: 6px; margin-top: 1rem;">
+                            <h3>🔄 Round {round_num}</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
                     
                     # In the final round, we should only have the synthesizer's response
                     is_final_round = (round_num == max(rounds.keys()))
@@ -720,21 +1011,30 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                         
                         # For final round, use a different style to emphasize it's the synthesis
                         if is_final_round:
-                            st.markdown(f"**{agent.agent_name}'s Final Synthesis:**")
-                            st.markdown(entry["content"])
+                            st.markdown(f"""
+                            <div style="background-color: #F0FDF4; padding: 1rem; border-radius: 6px; border-left: 4px solid #047857; margin: 1rem 0;">
+                                <h4 style="color: #047857; margin-top: 0;">{agent.agent_name}'s Final Synthesis</h4>
+                                <div style="margin-top: 0.5rem; color: #111827;">
+                                    {entry["content"]}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         else:
-                            # For other rounds, use expandable sections
-                            with st.expander(f"{agent.agent_name} says:", expanded=True):
+                            # For other rounds, use expandable sections with improved styling
+                            with st.expander(f"💬 {agent.agent_name} says:", expanded=True):
                                 st.markdown(entry["content"])
                 
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    if st.button("Continue Discussion"):
+                # Add buttons for continuing or starting new discussions
+                st.markdown("### What's Next?")
+                
+                button_col1, button_col2 = st.columns(2)
+                with button_col1:
+                    if st.button("🔄 Continue Discussion", use_container_width=True):
                         st.session_state.continue_discussion = True
                         st.experimental_rerun()
                         
-                with col2:
-                    if st.button("Start New Discussion"):
+                with button_col2:
+                    if st.button("🆕 Start New Discussion", use_container_width=True):
                         st.session_state.current_discussion_id = None
                         st.experimental_rerun()
 
