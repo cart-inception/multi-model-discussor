@@ -2,7 +2,7 @@
 
 A powerful Streamlit application that facilitates rich, interactive discussions between multiple Ollama AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights.
 
-![Multi-Agent Discussion in action](https://github.com/yourusername/multi-agent-discussion/raw/main/docs/images/discussion_example.png)
+
 
 ## Features
 
