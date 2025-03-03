@@ -11,7 +11,8 @@ from pathlib import Path
 
 # Add the project root to the Python path to allow importing modules from src
 sys.path.append(str(Path(__file__).parent.parent))
-from src.advanced_config import PersonaManager, advanced_config_main
+# Import all needed components from advanced_config
+from src.advanced_config import PersonaManager, advanced_config_main, gemini_config_ui, ollama_config_ui, persona_editor_ui
 
 # Import Google Gemini SDK
 try:
@@ -664,7 +665,49 @@ def main():
     if pages[selection] == "main_discussion":
         display_main_discussion_ui()
     elif pages[selection] == "advanced_config":
-        advanced_config_main()
+        # Display header for Advanced Configuration
+        st.markdown("# ⚙️ Advanced Configuration")
+        st.markdown("Configure personas and model settings")
+        
+        # Apply custom CSS for better UI
+        st.markdown("""
+        <style>
+        .stTabs [data-baseweb="tab"] {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .config-card {
+            background-color: #F9FAFB;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #E5E7EB;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Create tabs directly here to ensure they're all available
+        tabs = st.tabs(["👤 Persona Editor", "🖥️ Ollama Configuration", "🧠 Google Gemini"])
+        
+        with tabs[0]:
+            persona_editor_ui()
+        
+        with tabs[1]:
+            ollama_config_ui()
+            
+        with tabs[2]:
+            gemini_config_ui()
+        
+        # Debug info to ensure we can see what's happening with session state
+        if "debug_mode" in st.session_state and st.session_state.debug_mode:
+            with st.expander("🔍 Debug: Session State"):
+                st.write("Session State Keys:", list(st.session_state.keys()))
+                if "gemini_api_key" in st.session_state:
+                    st.write("Gemini API Key is set")
+                if "gemini_models" in st.session_state:
+                    st.write("Gemini Models:", st.session_state.gemini_models)
+                if "available_models" in st.session_state:
+                    st.write("All Available Models:", st.session_state.available_models)
 
 def display_main_discussion_ui():
     """Main discussion UI"""
@@ -908,6 +951,19 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                         </div>
                         """, unsafe_allow_html=True)
                         return
+                        
+                    # Check if main agent uses a Gemini model and API key is available
+                    if main_agent_model.startswith("gemini:"):
+                        api_key = st.session_state.get("gemini_api_key", os.environ.get("GOOGLE_API_KEY", ""))
+                        if not api_key:
+                            st.markdown(f"""
+                            <div class="warning">
+                                <h4>⚠️ Gemini API Key Missing</h4>
+                                <p>Main agent uses a Gemini model but no API key is configured. 
+                                Please configure your Google API key in the Advanced Configuration > Google Gemini tab.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            return
                     
                     # Create main agent
                     main_agent = ModelAgent(main_agent_model, main_agent_prompt, main_agent_name)
@@ -923,36 +979,93 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                             </div>
                             """, unsafe_allow_html=True)
                             return
+                        
+                        # Check if this agent uses a Gemini model and API key is available
+                        if config["model"].startswith("gemini:"):
+                            api_key = st.session_state.get("gemini_api_key", os.environ.get("GOOGLE_API_KEY", ""))
+                            if not api_key:
+                                st.markdown(f"""
+                                <div class="warning">
+                                    <h4>⚠️ Gemini API Key Missing</h4>
+                                    <p>Agent {i+1} uses a Gemini model but no API key is configured. 
+                                    Please configure your Google API key in the Advanced Configuration > Google Gemini tab.</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                return
                             
                         agent = ModelAgent(config["model"], config["prompt"], config["name"])
                         orchestrator.add_agent(f"agent_{i}", agent)
                     
-                    # Test the main agent with a simple query to verify Ollama connection
-                    with st.spinner("Testing connection to Ollama..."):
-                        try:
-                            # Simple test to ensure the model loads properly
-                            test_result = ollama.chat(
-                                model=main_agent_model,
-                                messages=[
-                                    {"role": "user", "content": "Respond with only the word 'OK' for connection test"}
-                                ]
-                            )
-                            st.markdown("""
-                            <div class="success">
-                                <h4>✅ Connection Verified</h4>
-                                <p>Successfully connected to Ollama and models are responding.</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        except Exception as test_error:
-                            st.markdown("""
-                            <div class="warning">
-                                <h4>⚠️ Connection Error</h4>
-                                <p>Error testing Ollama connection.</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            with st.expander("Debug Details"):
-                                st.code(traceback.format_exc())
-                            return
+                    # Test model connection based on provider (Ollama or Gemini)
+                    if main_agent_model.startswith("gemini:"):
+                        # Test Gemini connection
+                        with st.spinner("Testing connection to Google Gemini API..."):
+                            try:
+                                # Get API key from session state
+                                api_key = st.session_state.get("gemini_api_key", os.environ.get("GOOGLE_API_KEY", ""))
+                                if not api_key:
+                                    st.markdown("""
+                                    <div class="warning">
+                                        <h4>⚠️ Gemini API Key Missing</h4>
+                                        <p>Please configure your Google API key in the Advanced Configuration > Google Gemini tab.</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    return
+                                
+                                # Configure the API and test a simple call
+                                import google.generativeai as genai
+                                genai.configure(api_key=api_key)
+                                
+                                # The actual model name is without the gemini: prefix
+                                actual_model_name = main_agent_model.replace("gemini:", "")
+                                model = genai.GenerativeModel(actual_model_name)
+                                
+                                # Simple test query
+                                response = model.generate_content("Respond with OK")
+                                
+                                st.markdown("""
+                                <div class="success">
+                                    <h4>✅ Gemini Connection Verified</h4>
+                                    <p>Successfully connected to Google Gemini API.</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            except Exception as test_error:
+                                st.markdown("""
+                                <div class="warning">
+                                    <h4>⚠️ Gemini Connection Error</h4>
+                                    <p>Error testing Google Gemini API connection.</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                with st.expander("Debug Details"):
+                                    st.code(traceback.format_exc())
+                                return
+                    else:
+                        # Test Ollama connection
+                        with st.spinner("Testing connection to Ollama..."):
+                            try:
+                                # Simple test to ensure the model loads properly
+                                test_result = ollama.chat(
+                                    model=main_agent_model,
+                                    messages=[
+                                        {"role": "user", "content": "Respond with only the word 'OK' for connection test"}
+                                    ]
+                                )
+                                st.markdown("""
+                                <div class="success">
+                                    <h4>✅ Ollama Connection Verified</h4>
+                                    <p>Successfully connected to Ollama and models are responding.</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            except Exception as test_error:
+                                st.markdown("""
+                                <div class="warning">
+                                    <h4>⚠️ Ollama Connection Error</h4>
+                                    <p>Error testing Ollama connection.</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                with st.expander("Debug Details"):
+                                    st.code(traceback.format_exc())
+                                return
                     
                     st.session_state.orchestrator = orchestrator
                     st.session_state.agents_configured = True

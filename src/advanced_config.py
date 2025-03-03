@@ -259,7 +259,7 @@ def gemini_config_ui():
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("💾 Save API Key", use_container_width=True):
+            if st.button("💾 Save API Key", key="gemini_save_key_btn", use_container_width=True):
                 os.environ["GOOGLE_API_KEY"] = gemini_api_key
                 # Also save the API key to the session state
                 if "gemini_api_key" not in st.session_state:
@@ -322,7 +322,7 @@ def gemini_config_ui():
                         """, unsafe_allow_html=True)
         
         with col2:
-            if st.button("🔄 Refresh Models", use_container_width=True):
+            if st.button("🔄 Refresh Models", key="gemini_refresh_btn", use_container_width=True):
                 if not gemini_api_key:
                     st.markdown(f"""
                     <div class="warning">
