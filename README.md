@@ -1,12 +1,10 @@
-# Multi-Agent Discussion Platform
+# Multi-Model Discussion Platform
 
-A powerful Streamlit application that facilitates rich, interactive discussions between multiple AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights. Supports both local Ollama models and Google's Gemini API.
-
-
+A powerful Streamlit application that facilitates rich, interactive discussions between multiple AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights. Supports both local Ollama models and Google's Gemini API for maximum flexibility.
 
 ## Features
 
-- **Multi-Agent Conversations**: Configure up to 4 AI agents (1 synthesizer + 3 discussion agents) with distinct personas
+- **Multi-Model Conversations**: Configure up to 4 AI agents (1 synthesizer + 3 discussion agents) with distinct personas
 - **Natural Discussion Flow**: Agents build on each other's ideas in a realistic, conversational manner
 - **Flexible Agent Configuration**: Choose from built-in personas or create custom ones with specific expertise
 - **Interactive UI**: Watch responses stream in real-time and review discussion history
@@ -14,7 +12,8 @@ A powerful Streamlit application that facilitates rich, interactive discussions 
 - **Advanced Persona Management**: Create, edit, and manage custom personas with the built-in editor
 - **Multiple Model Support**:
   - **Ollama Integration**: Works with any model available in your local Ollama installation
-  - **Google Gemini Integration**: Connect to Google's Gemini API models
+  - **Google Gemini Integration**: Connect to Google's powerful Gemini models via API
+- **Mixed-Model Discussions**: Combine different model types (Ollama and Gemini) in the same conversation
 
 ## How It Works
 
@@ -45,8 +44,8 @@ First, ensure you have Python 3.8 or newer installed. Then install the required 
 
 ```bash
 # Clone this repository
-git clone https://github.com/yourusername/multi-agent-discussion.git
-cd multi-agent-discussion
+git clone https://github.com/yourusername/multi-model-discussion.git
+cd multi-model-discussion
 
 # Create and activate a virtual environment (recommended)
 python -m venv venv
@@ -105,7 +104,7 @@ Your default web browser should open automatically to the application (typically
    - Add 1-3 discussion agents with different personas
    - For each agent, select:
      - A name (e.g., "Creative Thinker", "Skeptical Analyst")
-     - An Ollama model to power the agent (different models can provide more diverse perspectives)
+     - A model to power the agent (Ollama or Gemini models)
      - A system prompt defining the agent's persona (use built-in templates or create custom ones)
 
 2. **Start a Discussion**:
@@ -181,31 +180,19 @@ For troubleshooting:
 1. Enable "Debug mode" in the Discussion tab
 2. This shows additional information about model responses and connection status
 
-## Code Architecture
-
-The application consists of several key components:
-
-- **`app.py`**: Main application file containing:
-  - `ModelAgent` class: Handles individual agent interactions with Ollama
-  - `DiscussionOrchestrator` class: Manages multi-agent conversations and rounds
-  - Streamlit UI implementation for the main discussion interface
-
-- **`advanced_config.py`**: Handles advanced configuration features:
-  - `PersonaManager` class: Manages saving/loading custom personas
-  - UI components for persona editing and Ollama configuration
-
-- **`personas/` directory**: Stores custom persona configurations as JSON files
-
 ## Tips for Best Results
 
 - **Model Diversity**: 
   - Use different models for different agents when possible
-  - Mix Ollama and Gemini models for varied thinking styles
+  - Mix Ollama and Gemini models for varied thinking styles and capabilities
 - **Agent Balance**: Include agents with complementary perspectives (e.g., creative + practical)
 - **Specific Topics**: Focused questions yield more coherent discussions than broad topics
 - **Persona Design**: Create personas with clear, distinct viewpoints and expertise areas
 - **Round Count**: 2-3 rounds typically produce the best balance of depth and coherence
 - **System Prompts**: Refine agent prompts to guide the style and focus of contributions
+- **Model Selection**:
+  - Use Gemini models for cutting-edge capabilities
+  - Use Ollama local models for privacy and speed
 
 ## Troubleshooting
 
