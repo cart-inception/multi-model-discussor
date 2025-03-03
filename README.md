@@ -36,7 +36,7 @@ The orchestrator manages the conversation flow, ensuring each agent has appropri
   - **Ollama**: Running either locally or on a remote server, with local Ollama models (llama3, mistral, phi3, etc.)
   - **Google Gemini API key**: For accessing Google's Gemini models
 
-## Detailed Setup Guide
+## Setup Guide
 
 ### 1. Install Python Dependencies
 
