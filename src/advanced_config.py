@@ -231,6 +231,254 @@ Ground your contrarian views in logic and evidence when possible."""
                     </div>
                     """, unsafe_allow_html=True)
 
+def gemini_config_ui():
+    """UI for configuring Google Gemini API settings"""
+    st.markdown("## 🧠 Google Gemini Configuration")
+    st.markdown("Configure Google Gemini API settings and available models")
+    
+    # Configure Gemini API key in a card-like container
+    st.markdown("""
+    <div class="config-card">
+        <h3 style="margin-top:0">API Settings</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    server_container = st.container()
+    with server_container:
+        default_api_key = os.environ.get("GOOGLE_API_KEY", "")
+        
+        # Use password input for API key
+        gemini_api_key = st.text_input(
+            "Google API Key", 
+            value=default_api_key,
+            type="password",
+            help="Your Google Gemini API key"
+        )
+        
+        st.markdown("Set your Google API key to access Gemini models")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save API Key", use_container_width=True):
+                os.environ["GOOGLE_API_KEY"] = gemini_api_key
+                # Also save the API key to the session state
+                if "gemini_api_key" not in st.session_state:
+                    st.session_state.gemini_api_key = gemini_api_key
+                else:
+                    st.session_state.gemini_api_key = gemini_api_key
+                    
+                st.markdown(f"""
+                <div class="success">
+                    <h4>✅ API Key Saved</h4>
+                    <p>Google API key has been saved for this session</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # If API key is valid, try to refresh models
+                if gemini_api_key:
+                    try:
+                        # Import here to test the API key
+                        import google.generativeai as genai
+                        
+                        # Configure the API key
+                        genai.configure(api_key=gemini_api_key)
+                        
+                        # List available models to verify API key works
+                        models = genai.list_models()
+                        
+                        # Add the Gemini models to available_models in session state
+                        gemini_models = []
+                        for model in models:
+                            if "generateContent" in model.supported_generation_methods:
+                                # Add a prefix to distinguish from Ollama models
+                                gemini_models.append(f"gemini:{model.name}")
+                        
+                        # Store in session state
+                        if "gemini_models" not in st.session_state:
+                            st.session_state.gemini_models = gemini_models
+                        else:
+                            st.session_state.gemini_models = gemini_models
+                            
+                        # Add to available models
+                        if "available_models" in st.session_state:
+                            # Filter out any existing Gemini models
+                            ollama_models = [m for m in st.session_state.available_models if not m.startswith("gemini:")]
+                            # Add the updated Gemini models
+                            st.session_state.available_models = ollama_models + gemini_models
+                            
+                        st.markdown(f"""
+                        <div class="success">
+                            <h4>✅ Models Refreshed</h4>
+                            <p>Successfully retrieved {len(gemini_models)} Gemini models</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.markdown(f"""
+                        <div class="warning">
+                            <h4>⚠️ API Error</h4>
+                            <p>Error connecting to Google Gemini API: {str(e)}</p>
+                            <p>Please check your API key</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("🔄 Refresh Models", use_container_width=True):
+                if not gemini_api_key:
+                    st.markdown(f"""
+                    <div class="warning">
+                        <h4>⚠️ Missing API Key</h4>
+                        <p>Please enter your Google API key first</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    try:
+                        # Import here to test the API key
+                        import google.generativeai as genai
+                        
+                        # Configure the API key
+                        genai.configure(api_key=gemini_api_key)
+                        
+                        # List available models to verify API key works
+                        models = genai.list_models()
+                        
+                        # Add the Gemini models to available_models in session state
+                        gemini_models = []
+                        for model in models:
+                            if "generateContent" in model.supported_generation_methods:
+                                # Add a prefix to distinguish from Ollama models
+                                gemini_models.append(f"gemini:{model.name}")
+                        
+                        # Store in session state
+                        if "gemini_models" not in st.session_state:
+                            st.session_state.gemini_models = gemini_models
+                        else:
+                            st.session_state.gemini_models = gemini_models
+                            
+                        # Add to available models
+                        if "available_models" in st.session_state:
+                            # Filter out any existing Gemini models
+                            ollama_models = [m for m in st.session_state.available_models if not m.startswith("gemini:")]
+                            # Add the updated Gemini models
+                            st.session_state.available_models = ollama_models + gemini_models
+                            
+                        st.markdown(f"""
+                        <div class="success">
+                            <h4>✅ Models Refreshed</h4>
+                            <p>Successfully retrieved {len(gemini_models)} Gemini models</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.markdown(f"""
+                        <div class="warning">
+                            <h4>⚠️ API Error</h4>
+                            <p>Error connecting to Google Gemini API: {str(e)}</p>
+                            <p>Please check your API key</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    # Status indicator
+    try:
+        if gemini_api_key:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_api_key)
+            
+            # Try to list models to verify connection
+            models = genai.list_models()
+            gemini_models = [m for m in models if "generateContent" in m.supported_generation_methods]
+            
+            if gemini_models:
+                st.markdown(f"""
+                <div class="success" style="display:flex; align-items:center;">
+                    <div style="font-size:24px; margin-right:10px;">🟢</div>
+                    <div>
+                        <p style="margin:0; font-weight:500;">Connected to Google Gemini API</p>
+                        <p style="margin:0; font-size:14px;">Found {len(gemini_models)} available models</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="warning" style="display:flex; align-items:center;">
+                    <div style="font-size:24px; margin-right:10px;">🟡</div>
+                    <div>
+                        <p style="margin:0; font-weight:500;">Connected to Google Gemini API but no usable models found</p>
+                        <p style="margin:0; font-size:14px;">Your API key may not have access to any models</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="warning" style="display:flex; align-items:center;">
+                <div style="font-size:24px; margin-right:10px;">⚪</div>
+                <div>
+                    <p style="margin:0; font-weight:500;">Google Gemini API not configured</p>
+                    <p style="margin:0; font-size:14px;">Please enter your API key above</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    except Exception as e:
+        st.markdown(f"""
+        <div class="warning" style="display:flex; align-items:center;">
+            <div style="font-size:24px; margin-right:10px;">🔴</div>
+            <div>
+                <p style="margin:0; font-weight:500;">Cannot connect to Google Gemini API</p>
+                <p style="margin:0; font-size:14px;">Error: {str(e)}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Display available models with improved UI
+    if "gemini_models" in st.session_state and st.session_state.gemini_models:
+        st.markdown("""
+        <div class="config-card" style="margin-top:20px;">
+            <h3 style="margin-top:0">Available Gemini Models</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Create a grid of models with 2 columns
+        col1, col2 = st.columns(2)
+        columns = [col1, col2]
+        
+        for i, model in enumerate(st.session_state.gemini_models):
+            # Extract the model name without prefix
+            model_name = model.replace("gemini:", "")
+            
+            # Use alternating columns
+            col = columns[i % 2]
+            
+            with col:
+                with st.expander(f"🧠 {model_name}"):
+                    model_display_name = model_name.split("/")[-1] if "/" in model_name else model_name
+                    st.markdown(f"""
+                    <div style="background-color: #F9FAFB; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <p style="margin: 0;"><strong>Model:</strong> {model_display_name}</p>
+                        <p style="margin: 0;"><strong>Full name:</strong> {model_name}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        if gemini_api_key:
+            st.markdown("""
+            <div class="info" style="text-align: center; padding: 20px;">
+                <h4>No Gemini Models Found</h4>
+                <p>No models are currently available with your API key.</p>
+                <p>Make sure your API key has access to Gemini models.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+    # API usage information
+    st.markdown("""
+    <div class="config-card" style="margin-top:20px;">
+        <h3 style="margin-top:0">Google Gemini API Information</h3>
+        <p>To use Google Gemini models, you need an API key from Google AI Studio:</p>
+        <ol>
+            <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+            <li>Create or sign in with your Google account</li>
+            <li>Get an API key and paste it in the configuration above</li>
+        </ol>
+        <p><strong>Note:</strong> API usage may incur charges based on your Google Cloud account settings.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
 def ollama_config_ui():
     """UI for configuring Ollama settings"""
     st.markdown("## 🖥️ Ollama Configuration")
@@ -397,10 +645,17 @@ def ollama_config_ui():
             st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
             if st.button("📋 Update Selection List", use_container_width=True):
                 if "available_models" in st.session_state:
-                    st.session_state.available_models = model_names
+                    # Make sure to preserve any Gemini models that might be in the session
+                    gemini_models = []
+                    if "gemini_models" in st.session_state and st.session_state.gemini_models:
+                        gemini_models = st.session_state.gemini_models
+                    
+                    # Update the available models with both Ollama and Gemini models
+                    st.session_state.available_models = model_names + gemini_models
+                    
                     st.markdown(f"""
                     <div class="success">
-                        <p>✅ Updated {len(model_names)} models for agent selection!</p>
+                        <p>✅ Updated {len(model_names)} Ollama models for agent selection!</p>
                     </div>
                     """, unsafe_allow_html=True)
         
@@ -558,7 +813,7 @@ def ollama_config_ui():
 def advanced_config_main():
     """Main function for the advanced configuration UI"""
     st.markdown("# ⚙️ Advanced Configuration")
-    st.markdown("Configure personas and Ollama settings")
+    st.markdown("Configure personas and model settings")
     
     # Apply custom CSS for better UI
     st.markdown("""
@@ -610,13 +865,16 @@ def advanced_config_main():
     """, unsafe_allow_html=True)
     
     # Use tabs for better organization
-    tabs = st.tabs(["👤 Persona Editor", "🖥️ Ollama Configuration"])
+    tabs = st.tabs(["👤 Persona Editor", "🖥️ Ollama Configuration", "🧠 Google Gemini"])
     
     with tabs[0]:
         persona_editor_ui()
     
     with tabs[1]:
         ollama_config_ui()
+        
+    with tabs[2]:
+        gemini_config_ui()
 
 if __name__ == "__main__":
     advanced_config_main()

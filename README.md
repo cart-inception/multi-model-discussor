@@ -1,6 +1,6 @@
 # Multi-Agent Discussion Platform
 
-A powerful Streamlit application that facilitates rich, interactive discussions between multiple Ollama AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights.
+A powerful Streamlit application that facilitates rich, interactive discussions between multiple AI models, each with its own distinct personality and system prompt. This platform enables you to create a panel of AI personas that can discuss topics collaboratively, providing diverse perspectives and insights. Supports both local Ollama models and Google's Gemini API.
 
 
 
@@ -12,7 +12,9 @@ A powerful Streamlit application that facilitates rich, interactive discussions 
 - **Interactive UI**: Watch responses stream in real-time and review discussion history
 - **Sophisticated Orchestration**: Multi-round discussions with automatic context management
 - **Advanced Persona Management**: Create, edit, and manage custom personas with the built-in editor
-- **Ollama Integration**: Works with any model available in your local Ollama installation
+- **Multiple Model Support**:
+  - **Ollama Integration**: Works with any model available in your local Ollama installation
+  - **Google Gemini Integration**: Connect to Google's Gemini API models
 
 ## How It Works
 
@@ -31,8 +33,9 @@ The orchestrator manages the conversation flow, ensuring each agent has appropri
 
 - **Python 3.8+**
 - **Streamlit 1.26.0+**: For the interactive web interface
-- **Ollama**: Running either locally or on a remote server
-- **Local Ollama models**: Compatible with any models available in Ollama (llama3, mistral, phi3, etc.)
+- **At least one of the following model backends**:
+  - **Ollama**: Running either locally or on a remote server, with local Ollama models (llama3, mistral, phi3, etc.)
+  - **Google Gemini API key**: For accessing Google's Gemini models
 
 ## Detailed Setup Guide
 
@@ -53,9 +56,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Install and Configure Ollama
+### 2. Set Up Your Model Backend
 
-The application requires Ollama to provide the AI models:
+The application supports two model backends:
+
+#### Option A: Ollama (Local Models)
 
 1. Install Ollama following the [official instructions](https://ollama.ai/download) for your platform
 2. Start the Ollama service:
@@ -68,6 +73,18 @@ The application requires Ollama to provide the AI models:
    ```
 
 You can also configure Ollama to run on a different machine by setting the `OLLAMA_HOST` environment variable or configuring it through the application's Advanced Configuration page.
+
+#### Option B: Google Gemini API
+
+1. Get a Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Store your API key in the application:
+   - Option 1: Set an environment variable before starting the app:
+     ```bash
+     export GOOGLE_API_KEY=your_api_key_here
+     ```
+   - Option 2: Enter your API key in the Advanced Configuration > Google Gemini section of the application
+
+Note: You can set up both backends to access a wider variety of models.
 
 ### 3. Launch the Application
 
@@ -121,7 +138,9 @@ The application comes with several built-in personas and allows you to create cu
 
 Personas are saved as JSON files in the `personas/` directory and will persist between sessions.
 
-### Configuring Ollama
+### Configuring Model Backends
+
+#### Ollama Configuration
 
 If you're running Ollama on a different machine or want to manage your models:
 
@@ -129,6 +148,15 @@ If you're running Ollama on a different machine or want to manage your models:
 2. Set your Ollama host URL (default is http://localhost:11434)
 3. View available models and pull new ones if needed
 4. Filter models by family (llama, mistral, phi, etc.)
+
+#### Google Gemini Configuration
+
+To set up or manage your Gemini API access:
+
+1. Go to "Advanced Configuration" > "Google Gemini"
+2. Enter your Google API key
+3. Click "Save API Key" to store it for the session
+4. View available Gemini models that will appear in agent configuration
 
 ## Advanced Features
 
@@ -170,7 +198,9 @@ The application consists of several key components:
 
 ## Tips for Best Results
 
-- **Model Diversity**: Use different models for different agents when possible
+- **Model Diversity**: 
+  - Use different models for different agents when possible
+  - Mix Ollama and Gemini models for varied thinking styles
 - **Agent Balance**: Include agents with complementary perspectives (e.g., creative + practical)
 - **Specific Topics**: Focused questions yield more coherent discussions than broad topics
 - **Persona Design**: Create personas with clear, distinct viewpoints and expertise areas
@@ -179,7 +209,7 @@ The application consists of several key components:
 
 ## Troubleshooting
 
-### Connection Issues
+### Ollama Connection Issues
 
 If the application can't connect to Ollama:
 
@@ -188,14 +218,23 @@ If the application can't connect to Ollama:
 3. Ensure no firewall is blocking port 11434
 4. Test the connection directly with `curl http://localhost:11434/api/tags`
 
+### Gemini API Issues
+
+If you have problems with Google Gemini models:
+
+1. Verify your API key is correct and properly configured
+2. Check your API key permissions and quotas in Google AI Studio
+3. Try refreshing the models list in the Gemini Configuration section
+4. Check for any error messages in the API response
+
 ### Model Loading Problems
 
 If models aren't appearing or loading:
 
-1. Go to Advanced Configuration > Ollama Configuration
+1. Go to Advanced Configuration > Ollama Configuration or Google Gemini
 2. Click "Refresh Models" to update the available model list
-3. If models are missing, pull them using Ollama or the UI
-4. Verify model names in the application match those in Ollama
+3. For Ollama models that are missing, pull them using Ollama or the UI
+4. Verify model names in the application match those in your model providers
 
 ### UI Responsiveness
 
@@ -223,4 +262,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Built using [Streamlit](https://streamlit.io/) for the interactive UI
 - Powered by [Ollama](https://ollama.ai/) for local LLM inference
+- Integrated with [Google Gemini API](https://ai.google.dev/) for cloud-based models
 - Inspired by various multi-agent AI collaboration frameworks

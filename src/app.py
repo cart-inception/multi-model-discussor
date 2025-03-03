@@ -13,6 +13,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from src.advanced_config import PersonaManager, advanced_config_main
 
+# Import Google Gemini SDK
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
 class ModelAgent:
     def __init__(self, model_name, system_prompt, agent_name):
         self.model_name = model_name
@@ -28,6 +34,20 @@ class ModelAgent:
             stream: If True, return a generator yielding tokens as they become available
                    If False, return the full response text
         """
+        # Check if this is a Gemini model
+        if self.model_name.startswith("gemini:"):
+            # Delegate to GeminiModelAgent
+            gemini_agent = GeminiModelAgent(self.model_name, self.system_prompt, self.agent_name)
+            gemini_agent.conversation_history = self.conversation_history.copy()
+            result = gemini_agent.generate_response(message, stream)
+            
+            # Update conversation history if non-streaming (streaming updates happen in the generator)
+            if not stream:
+                self.conversation_history = gemini_agent.conversation_history.copy()
+                
+            return result
+        
+        # Otherwise, use Ollama API
         try:
             messages = [
                 {"role": "system", "content": self.system_prompt},
@@ -93,6 +113,112 @@ class ModelAgent:
                 return assistant_message
         except Exception as e:
             error_msg = f"Error with {self.agent_name}: {str(e)}"
+            if stream:
+                # Return a single item generator for error cases
+                def error_generator():
+                    yield error_msg, error_msg
+                return error_generator()
+            return error_msg
+            
+class GeminiModelAgent:
+    def __init__(self, model_name, system_prompt, agent_name):
+        # Remove the gemini: prefix from the model name
+        self.model_name = model_name.replace("gemini:", "")
+        self.system_prompt = system_prompt
+        self.agent_name = agent_name
+        self.conversation_history = []
+        
+        # Get API key from session state or environment
+        api_key = st.session_state.get("gemini_api_key", os.environ.get("GOOGLE_API_KEY", ""))
+        if not api_key:
+            raise ValueError("Google API key not found. Please configure it in the Gemini settings.")
+            
+        # Configure the Gemini API
+        genai.configure(api_key=api_key)
+        
+    def generate_response(self, message, stream=False):
+        """Generate a response from the Gemini model
+        
+        Args:
+            message: The message to send to the model
+            stream: If True, return a generator yielding tokens as they become available
+                   If False, return the full response text
+        """
+        try:
+            # Create a new conversation model
+            model = genai.GenerativeModel(self.model_name)
+            
+            # Format conversation history for Gemini
+            # First convert to Gemini conversation format
+            chat = model.start_chat(history=[])
+            
+            # Add system prompt as first message from user
+            if self.system_prompt:
+                chat.history.append({"role": "user", "parts": [self.system_prompt]})
+                chat.history.append({"role": "model", "parts": ["I'll follow these instructions as I respond."]})
+            
+            # Add conversation history
+            for msg in self.conversation_history:
+                role = "user" if msg["role"] == "user" else "model"
+                chat.history.append({"role": role, "parts": [msg["content"]]})
+            
+            # Add the new message
+            if stream:
+                # Create a streaming response generator
+                def stream_response():
+                    full_response = ""
+                    chunk_count = 0
+                    
+                    try:
+                        # Send the message to the model
+                        stream_resp = chat.send_message(message, stream=True)
+                        
+                        # Show debug info if needed
+                        if "debug_mode" in st.session_state and st.session_state.debug_mode:
+                            st.write(f"Debug: Started streaming with Gemini {self.model_name}")
+                        
+                        for chunk in stream_resp:
+                            chunk_count += 1
+                            
+                            # Debug the chunk format if debug mode enabled
+                            if "debug_mode" in st.session_state and st.session_state.debug_mode and chunk_count <= 2:
+                                st.write(f"Debug: Gemini stream chunk format: {chunk}")
+                            
+                            if hasattr(chunk, 'text'):
+                                content = chunk.text
+                                full_response += content
+                                yield content, full_response
+                        
+                        # Add to conversation history when complete
+                        self.conversation_history.append({"role": "user", "content": message})
+                        self.conversation_history.append({"role": "assistant", "content": full_response})
+                        
+                        # Debug completion
+                        if "debug_mode" in st.session_state and st.session_state.debug_mode:
+                            st.write(f"Debug: Completed Gemini streaming with {chunk_count} chunks")
+                    
+                    except Exception as e:
+                        error_msg = f"Error in Gemini stream_response: {str(e)}"
+                        if "debug_mode" in st.session_state and st.session_state.debug_mode:
+                            st.error(f"Debug: {error_msg}")
+                            st.write(f"Debug: Traceback: {traceback.format_exc()}")
+                        yield error_msg, error_msg
+                
+                # Return the generator
+                return stream_response()
+            else:
+                # Non-streaming response
+                response = chat.send_message(message)
+                assistant_message = response.text
+                
+                # Add to conversation history
+                self.conversation_history.append({"role": "user", "content": message})
+                self.conversation_history.append({"role": "assistant", "content": assistant_message})
+                
+                return assistant_message
+                
+        except Exception as e:
+            error_msg = f"Error with Gemini ({self.agent_name}): {str(e)}"
             if stream:
                 # Return a single item generator for error cases
                 def error_generator():
@@ -265,62 +391,59 @@ Share personal perspectives or examples if relevant.""")
 
 # Utility functions
 def refresh_available_models():
-    """Check Ollama for available models and update the session state"""
+    """Check Ollama and Gemini for available models and update the session state"""
+    available_models = []
+    ollama_success = False
+    gemini_success = False
+    
+    # Try to get Ollama models
     try:
         response = ollama.list()
-        if 'models' not in response:
-            st.error("Unexpected response from Ollama API: 'models' key missing")
-            st.session_state.available_models = []
-            return False
+        if 'models' in response:
+            models = response['models']
+            ollama_model_names = []
             
-        models = response['models']
-        model_names = []
-        
-        # Debug the response format
-        with st.expander("Debug: Ollama API Response Format"):
-            st.write("First model data structure:")
-            if models and len(models) > 0:
-                st.write(f"Type: {type(models[0])}")
-                st.write(f"Example: {models[0]}")
-                
-                # If model is an object with __dict__ attribute, try to access model data
-                if hasattr(models[0], '__dict__'):
-                    st.write("Model attributes:")
-                    model_dict = models[0].__dict__
-                    st.write(model_dict)
-        
-        for model in models:
-            # Handle both dictionary and object formats
-            if isinstance(model, dict) and 'name' in model:
-                model_names.append(model['name'])
-            elif hasattr(model, 'model') and isinstance(model.model, str):
-                # Handle object format where model name is in a 'model' attribute
-                model_names.append(model.model)
-            else:
-                # Try to extract name if it's an object with __dict__
-                if hasattr(model, '__dict__'):
-                    model_dict = model.__dict__
-                    if 'model' in model_dict and isinstance(model_dict['model'], str):
-                        model_names.append(model_dict['model'])
-                        continue
-                
-                st.warning(f"Skipping model with invalid format: {model}")
-                
-        st.session_state.available_models = model_names
-        
-        # Log the detected models
-        st.info(f"Detected {len(model_names)} models: {', '.join(model_names) if model_names else 'None'}")
-        
-        return True
-    except KeyError as e:
-        st.error(f"Error parsing Ollama response: {str(e)}")
-        st.session_state.available_models = []
-        return False
+            # Debug the response format
+            with st.expander("Debug: Ollama API Response Format", expanded=False):
+                st.write("First model data structure:")
+                if models and len(models) > 0:
+                    st.write(f"Type: {type(models[0])}")
+                    st.write(f"Example: {models[0]}")
+                    
+                    # If model is an object with __dict__ attribute, try to access model data
+                    if hasattr(models[0], '__dict__'):
+                        st.write("Model attributes:")
+                        model_dict = models[0].__dict__
+                        st.write(model_dict)
+            
+            for model in models:
+                # Handle both dictionary and object formats
+                if isinstance(model, dict) and 'name' in model:
+                    ollama_model_names.append(model['name'])
+                elif hasattr(model, 'model') and isinstance(model.model, str):
+                    # Handle object format where model name is in a 'model' attribute
+                    ollama_model_names.append(model.model)
+                else:
+                    # Try to extract name if it's an object with __dict__
+                    if hasattr(model, '__dict__'):
+                        model_dict = model.__dict__
+                        if 'model' in model_dict and isinstance(model_dict['model'], str):
+                            ollama_model_names.append(model_dict['model'])
+                            continue
+                    
+                    st.warning(f"Skipping model with invalid format: {model}")
+            
+            # Add Ollama models to the available models
+            available_models.extend(ollama_model_names)
+            ollama_success = True
+            
+            # Add info about detected Ollama models
+            st.info(f"Detected {len(ollama_model_names)} Ollama models")
+            
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         st.error(f"Error connecting to Ollama: {str(e)}")
-        st.session_state.available_models = []
         
         # Add a debug expander with technical details
         with st.expander("Debug Details"):
@@ -340,8 +463,50 @@ def refresh_available_models():
                 st.write(f"Response: {response.text}")
             except Exception as conn_error:
                 st.write(f"Connection test failed: {str(conn_error)}")
+    
+    # Try to get Gemini models if the API key is available
+    if genai is not None and ("gemini_api_key" in st.session_state or "GOOGLE_API_KEY" in os.environ):
+        try:
+            # Get API key from session state or environment
+            api_key = st.session_state.get("gemini_api_key", os.environ.get("GOOGLE_API_KEY", ""))
+            
+            if api_key:
+                genai.configure(api_key=api_key)
                 
-        return False
+                # List available models
+                models = genai.list_models()
+                
+                # Filter to models that support text generation
+                gemini_models = []
+                for model in models:
+                    if "generateContent" in model.supported_generation_methods:
+                        # Add a prefix to distinguish from Ollama models
+                        gemini_models.append(f"gemini:{model.name}")
+                
+                # Add Gemini models to available models
+                available_models.extend(gemini_models)
+                
+                # Store in session state for reference
+                st.session_state.gemini_models = gemini_models
+                
+                # Add info about detected Gemini models
+                st.info(f"Detected {len(gemini_models)} Gemini models")
+                
+                gemini_success = True
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            st.error(f"Error connecting to Google Gemini API: {str(e)}")
+            
+            # Add a debug expander with technical details
+            with st.expander("Debug Details: Gemini"):
+                st.code(error_details)
+    
+    # Update the session state with all available models
+    st.session_state.available_models = available_models
+    
+    # Return True if either Ollama or Gemini was successful
+    return ollama_success or gemini_success
 
 # GUI Application
 def main():
