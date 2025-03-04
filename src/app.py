@@ -263,7 +263,9 @@ class DiscussionOrchestrator:
 
 As the discussion leader, please share your initial thoughts in a casual, engaging way.
 Keep it friendly and conversational - imagine you're chatting with colleagues at a coffee shop.
-Feel free to ask open questions that other participants can build upon."""
+Provide a balanced, nuanced perspective that introduces different angles to consider.
+Raise several clear, distinct points that other participants can engage with specifically.
+End with 2-3 thought-provoking questions that invite different perspectives and will spark an interactive discussion."""
             
             if stream_handler:
                 # Stream the initial response
@@ -326,6 +328,18 @@ Feel free to ask open questions that other participants can build upon."""
                 context_parts = [f"DISCUSSION TOPIC: {topic}"]
                 context_parts.append("\nRecent messages in our conversation:")
                 
+                # Include user messages in latest responses if present
+                user_messages = [msg for msg in self.discussion_history[discussion_id] 
+                                if msg.get('agent') == 'user' and msg.get('round') == r]
+                
+                # Add any user messages to the latest responses
+                for user_msg in user_messages:
+                    if 'user' not in latest_responses:
+                        latest_responses['user'] = {
+                            'content': user_msg['content'],
+                            'agent_name': 'Human User'
+                        }
+                
                 # Sort responses by agent to create a more logical conversation flow
                 sorted_responses = sorted(latest_responses.items(), key=lambda x: x[0] != "main")
                 
@@ -341,19 +355,27 @@ Feel free to ask open questions that other participants can build upon."""
                     # Final synthesis by main agent - comprehensive summary
                     context_parts.insert(0, """Now that we've had this discussion, could you synthesize what we've talked about?
 
-Please summarize the key points from our conversation, highlighting areas of agreement and interesting perspectives.
-This should feel like a natural wrap-up to our coffee shop discussion - conversational but insightful.
-Make it clear where different participants contributed valuable ideas, and how they built on each other.
+Please summarize the key points from our conversation, highlighting areas of agreement, disagreement, and interesting perspectives.
+Identify how different participants built on or challenged each other's ideas throughout the conversation.
+Highlight specific exchanges where viewpoints evolved or where there were productive disagreements.
+Your synthesis should emphasize the interactive nature of the discussion rather than just listing each person's contributions.
 Acknowledge any open questions that might remain for future discussions.""")
                 else:
-                    # Response from discussion agent - more conversational
-                    context_parts.insert(0, """Here's how our conversation is going so far. 
+                    # Response from discussion agent - much more interactive
+                    context_parts.insert(0, """You are participating in an interactive discussion. Your task is to respond to the specific points made by others in a way that advances the conversation.
 
-Jump in naturally as if you're part of this ongoing coffee shop chat.
-Respond directly to specific points others have made - agree, disagree, ask follow-up questions, or build on their ideas.
-Keep your tone casual and conversational, but still thoughtful.
-Feel free to use conversational language like "I see what you're saying about X, but have you considered Y?" or "That's an interesting point! I'd add that..."
-Share personal perspectives or examples if relevant.""")
+IMPORTANT: DO NOT simply restate the topic or add general thoughts. Instead:
+1. DIRECTLY ENGAGE with what others have said by name (e.g., "I agree with Sarah's point about X, but I think...")
+2. CHALLENGE or BUILD UPON specific ideas from previous messages
+3. INTRODUCE a new perspective only if it relates to what's already been discussed
+4. ASK thought-provoking questions about others' contributions
+5. ACKNOWLEDGE points of agreement AND disagreement with specific participants
+
+Your response should feel like a natural part of an ongoing conversation where people are genuinely responding to each other, not just taking turns speaking.
+
+If you disagree with something someone said, explain why specifically.
+If you agree, add additional context, examples, or implications that develop the idea further.
+Avoid broad generalizations that don't reference specific points already made.""")
                 
                 context = "\n\n".join(context_parts)
                 
@@ -1215,7 +1237,11 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                             st.error(f"Error updating streaming UI: {str(e)}")
                     
                     with st.spinner("💭 Discussion in progress..."):
-                        if continue_discussion and st.session_state.current_discussion_id:
+                        if (continue_discussion or st.session_state.get("continue_next_round", False)) and st.session_state.current_discussion_id:
+                            # Reset the continue flag if it was set
+                            if st.session_state.get("continue_next_round", False):
+                                st.session_state.continue_next_round = False
+                                
                             # Continue existing discussion
                             discussion_id = st.session_state.orchestrator.start_discussion(
                                 topic, 
@@ -1285,6 +1311,21 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                     
                     for entry in rounds[round_num]:
                         agent_id = entry["agent"]
+                        
+                        # Handle user messages specially
+                        if agent_id == "user":
+                            # Display user messages with a special style
+                            st.markdown(f"""
+                            <div style="background-color: #EBF8FF; padding: 1rem; border-radius: 6px; border-left: 4px solid #3182CE; margin: 1rem 0;">
+                                <h4 style="color: #2C5282; margin-top: 0;">Your Input</h4>
+                                <div style="margin-top: 0.5rem; color: #111827;">
+                                    {entry["content"]}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            continue
+                            
+                        # Regular agent messages
                         agent = st.session_state.orchestrator.agents[agent_id]
                         
                         # For final round, use a different style to emphasize it's the synthesis
@@ -1307,14 +1348,34 @@ Feel free to use analogies, examples, or personal anecdotes to illustrate your p
                 
                 button_col1, button_col2 = st.columns(2)
                 with button_col1:
-                    if st.button("🔄 Continue Discussion", use_container_width=True):
+                    if st.button("🔄 Continue Discussion", key="continue_discussion_btn", use_container_width=True):
+                        # Set flag in session state instead of immediate rerun
                         st.session_state.continue_discussion = True
-                        st.experimental_rerun()
+                        # Add an input field for user contributions
+                        user_input = st.text_area("Add your thoughts to the discussion (optional):", 
+                                                  key="user_discussion_input", 
+                                                  height=100)
+                        
+                        if st.button("Submit & Continue", key="submit_continue_btn"):
+                            # If user added input, add it to the discussion history
+                            if user_input.strip():
+                                # Get the current discussion history
+                                discussion_id = st.session_state.current_discussion_id
+                                if discussion_id:
+                                    # Add user contribution to history
+                                    st.session_state.orchestrator.discussion_history[discussion_id].append({
+                                        "agent": "user",
+                                        "content": user_input,
+                                        "timestamp": time.time(),
+                                        "round": max([msg.get('round', 0) for msg in 
+                                                    st.session_state.orchestrator.get_discussion_history(discussion_id)])
+                                    })
+                            # Continue with the next round
+                            st.session_state.continue_next_round = True
                         
                 with button_col2:
-                    if st.button("🆕 Start New Discussion", use_container_width=True):
+                    if st.button("🆕 Start New Discussion", key="new_discussion_btn", use_container_width=True):
                         st.session_state.current_discussion_id = None
-                        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
